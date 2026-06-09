@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EcoTrack Carbon Footprint Awareness Platform</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="EcoTrack navigation">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">E</div>
+        <div>
+          <strong>EcoTrack</strong>
+          <span>Carbon awareness</span>
+        </div>
+      </div>
+      <nav>
+        <a href="#dashboard" class="active">Dashboard</a>
+        <a href="#calculator">Calculator</a>
+        <a href="#goals">Goals</a>
+        <a href="#learn">Learn</a>
+      </nav>
+      <div class="sidebar-summary">
+        <span>Target</span>
+        <strong id="sidebarTarget">Reduce 12%</strong>
+      </div>
+    </aside>
+
+    <main>
+      <section class="topbar" id="dashboard">
+        <div>
+          <p class="eyebrow">Personal monthly estimate</p>
+          <h1>Your carbon footprint, made visible.</h1>
+        </div>
+        <button id="resetButton" class="ghost-button" type="button">Reset data</button>
+      </section>
+
+      <section class="hero-panel" aria-label="Carbon footprint overview">
+        <div class="score-block">
+          <span class="score-label">Estimated footprint</span>
+          <div><span id="totalFootprint" class="score">0.00</span><span class="unit"> tCO2e / month</span></div>
+          <p id="comparisonText">Fill the calculator to compare your footprint with an average lifestyle.</p>
+          <div class="goal-line">
+            <span>Reduction goal</span>
+            <input id="goalRange" type="range" min="5" max="40" step="1" value="12">
+            <strong id="goalValue">12%</strong>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="sourceChart" width="560" height="320" aria-label="Emission source chart"></canvas>
+        </div>
+      </section>
+
+      <section class="metric-grid" aria-label="Emission metrics">
+        <article class="metric">
+          <span>Transport</span>
+          <strong id="transportMetric">0 kg</strong>
+          <small id="transportNote">Daily movement</small>
+        </article>
+        <article class="metric">
+          <span>Electricity</span>
+          <strong id="electricityMetric">0 kg</strong>
+          <small id="electricityNote">Home energy</small>
+        </article>
+        <article class="metric">
+          <span>Food</span>
+          <strong id="foodMetric">0 kg</strong>
+          <small id="foodNote">Diet pattern</small>
+        </article>
+        <article class="metric">
+          <span>Shopping & waste</span>
+          <strong id="shoppingMetric">0 kg</strong>
+          <small id="shoppingNote">Consumption habits</small>
+        </article>
+      </section>
+
+      <section class="workbench">
+        <form class="calculator" id="calculator" aria-label="Carbon footprint calculator">
+          <div class="section-heading">
+            <p class="eyebrow">Calculator</p>
+            <h2>Lifestyle inputs</h2>
+          </div>
+
+          <label>
+            Transportation method
+            <select id="transportMode">
+              <option value="car">Private car</option>
+              <option value="carpool">Carpool</option>
+              <option value="bus">Public transport</option>
+              <option value="train">Metro or train</option>
+              <option value="cycle">Walk or cycle</option>
+            </select>
+          </label>
+          <label>
+            Travel distance per week
+            <div class="input-row"><input id="distance" type="number" min="0" value="120"><span>km</span></div>
+          </label>
+          <label>
+            Electricity usage per month
+            <div class="input-row"><input id="electricity" type="number" min="0" value="180"><span>kWh</span></div>
+          </label>
+          <label>
+            Food habit
+            <select id="diet">
+              <option value="mixed">Mixed diet</option>
+              <option value="meatHeavy">Meat-heavy</option>
+              <option value="lowMeat">Low meat</option>
+              <option value="vegetarian">Vegetarian</option>
+              <option value="vegan">Plant-based</option>
+            </select>
+          </label>
+          <label>
+            Shopping frequency
+            <select id="shopping">
+              <option value="low">Low</option>
+              <option value="moderate" selected>Moderate</option>
+              <option value="high">High</option>
+            </select>
+          </label>
+          <label>
+            Waste generated per week
+            <div class="input-row"><input id="waste" type="number" min="0" value="8"><span>kg</span></div>
+          </label>
+          <label>
+            Flight travel this month
+            <div class="input-row"><input id="flights" type="number" min="0" value="0"><span>hours</span></div>
+          </label>
+        </form>
+
+        <section class="insights" aria-label="Personalized insights">
+          <div class="section-heading">
+            <p class="eyebrow">Insights</p>
+            <h2>Best next actions</h2>
+          </div>
+          <div id="insightList" class="insight-list"></div>
+          <div class="progress-card">
+            <div>
+              <span>Monthly progress</span>
+              <strong id="progressText">0 kg saved</strong>
+            </div>
+            <div class="progress-track"><span id="progressBar"></span></div>
+          </div>
+        </section>
+      </section>
+
+      <section class="goals-band" id="goals">
+        <div class="section-heading">
+          <p class="eyebrow">Eco goals and challenges</p>
+          <h2>Build small habits that stick</h2>
+        </div>
+        <div id="challengeList" class="challenge-list"></div>
+      </section>
+
+      <section class="learn-grid" id="learn" aria-label="Awareness content">
+        <article>
+          <span>Climate fact</span>
+          <h3>Electricity choices matter</h3>
+          <p>Efficient appliances, switched-off standby devices, and renewable energy plans can reduce household emissions quickly.</p>
+        </article>
+        <article>
+          <span>Daily habit</span>
+          <h3>Short trips are opportunities</h3>
+          <p>Walking, cycling, public transport, or carpooling for nearby travel can lower transport emissions while improving routine fitness.</p>
+        </article>
+        <article>
+          <span>Sustainable living</span>
+          <h3>Reuse before recycling</h3>
+          <p>Repairing, sharing, refilling, and buying local products often avoids emissions before waste management even begins.</p>
+        </article>
+      </section>
+    </main>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>

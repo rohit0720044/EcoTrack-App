@@ -1,0 +1,300 @@
+const emissionFactors = {
+  transport: {
+    car: { factor: 0.192, label: "Private car" },
+    carpool: { factor: 0.096, label: "Carpool" },
+    bus: { factor: 0.082, label: "Public transport" },
+    train: { factor: 0.041, label: "Metro or train" },
+    cycle: { factor: 0, label: "Walk or cycle" }
+  },
+  diet: {
+    meatHeavy: { kg: 310, label: "Meat-heavy" },
+    mixed: { kg: 220, label: "Mixed diet" },
+    lowMeat: { kg: 160, label: "Low meat" },
+    vegetarian: { kg: 125, label: "Vegetarian" },
+    vegan: { kg: 95, label: "Plant-based" }
+  },
+  shopping: {
+    low: { kg: 45, label: "Low shopping" },
+    moderate: { kg: 92, label: "Moderate shopping" },
+    high: { kg: 170, label: "High shopping" }
+  }
+};
+
+const challenges = [
+  { id: "transit", title: "Use public transport 3 times", points: 80 },
+  { id: "power", title: "Reduce electricity by 10%", points: 90 },
+  { id: "plastic", title: "Avoid plastic bags for 7 days", points: 60 },
+  { id: "tree", title: "Plant or sponsor a tree", points: 100 },
+  { id: "cycle", title: "Walk or cycle short trips", points: 75 }
+];
+
+const defaultState = {
+  transportMode: "car",
+  distance: 120,
+  electricity: 180,
+  diet: "mixed",
+  shopping: "moderate",
+  waste: 8,
+  flights: 0,
+  goal: 12,
+  completed: []
+};
+
+const averageMonthlyKg = 1250;
+const storageKey = "ecotrack-state-v1";
+const formIds = ["transportMode", "distance", "electricity", "diet", "shopping", "waste", "flights"];
+const state = loadState();
+
+const elements = {
+  total: document.querySelector("#totalFootprint"),
+  comparison: document.querySelector("#comparisonText"),
+  goalRange: document.querySelector("#goalRange"),
+  goalValue: document.querySelector("#goalValue"),
+  sidebarTarget: document.querySelector("#sidebarTarget"),
+  chart: document.querySelector("#sourceChart"),
+  insightList: document.querySelector("#insightList"),
+  challengeList: document.querySelector("#challengeList"),
+  progressText: document.querySelector("#progressText"),
+  progressBar: document.querySelector("#progressBar"),
+  transportMetric: document.querySelector("#transportMetric"),
+  electricityMetric: document.querySelector("#electricityMetric"),
+  foodMetric: document.querySelector("#foodMetric"),
+  shoppingMetric: document.querySelector("#shoppingMetric"),
+  transportNote: document.querySelector("#transportNote"),
+  electricityNote: document.querySelector("#electricityNote"),
+  foodNote: document.querySelector("#foodNote"),
+  shoppingNote: document.querySelector("#shoppingNote")
+};
+
+function loadState() {
+  try {
+    return { ...defaultState, ...JSON.parse(localStorage.getItem(storageKey)) };
+  } catch {
+    return { ...defaultState };
+  }
+}
+
+function saveState() {
+  localStorage.setItem(storageKey, JSON.stringify(state));
+}
+
+function clampNumber(value) {
+  return Math.max(0, Number(value) || 0);
+}
+
+function calculate() {
+  const transport = clampNumber(state.distance) * 4.33 * emissionFactors.transport[state.transportMode].factor;
+  const electricity = clampNumber(state.electricity) * 0.72;
+  const food = emissionFactors.diet[state.diet].kg;
+  const shopping = emissionFactors.shopping[state.shopping].kg + clampNumber(state.waste) * 4.33 * 0.57;
+  const travel = clampNumber(state.flights) * 90;
+  const total = transport + electricity + food + shopping + travel;
+
+  return {
+    transport,
+    electricity,
+    food,
+    shopping,
+    travel,
+    total
+  };
+}
+
+function formatKg(value) {
+  return `${Math.round(value).toLocaleString()} kg`;
+}
+
+function hydrateInputs() {
+  formIds.forEach((id) => {
+    const input = document.querySelector(`#${id}`);
+    input.value = state[id];
+    input.addEventListener("input", () => {
+      state[id] = input.type === "number" ? clampNumber(input.value) : input.value;
+      saveState();
+      render();
+    });
+  });
+
+  elements.goalRange.value = state.goal;
+  elements.goalRange.addEventListener("input", () => {
+    state.goal = Number(elements.goalRange.value);
+    saveState();
+    render();
+  });
+
+  document.querySelector("#resetButton").addEventListener("click", () => {
+    Object.assign(state, defaultState);
+    saveState();
+    hydrateValuesOnly();
+    render();
+  });
+}
+
+function hydrateValuesOnly() {
+  formIds.forEach((id) => {
+    document.querySelector(`#${id}`).value = state[id];
+  });
+  elements.goalRange.value = state.goal;
+}
+
+function render() {
+  const data = calculate();
+  const reductionKg = data.total * (state.goal / 100);
+  const completedPoints = challenges
+    .filter((challenge) => state.completed.includes(challenge.id))
+    .reduce((sum, challenge) => sum + challenge.points, 0);
+  const progressKg = completedPoints * 1.8;
+
+  elements.total.textContent = (data.total / 1000).toFixed(2);
+  elements.goalValue.textContent = `${state.goal}%`;
+  elements.sidebarTarget.textContent = `Reduce ${state.goal}%`;
+  elements.comparison.textContent = comparisonCopy(data.total, reductionKg);
+  elements.transportMetric.textContent = formatKg(data.transport + data.travel);
+  elements.electricityMetric.textContent = formatKg(data.electricity);
+  elements.foodMetric.textContent = formatKg(data.food);
+  elements.shoppingMetric.textContent = formatKg(data.shopping);
+  elements.transportNote.textContent = `${emissionFactors.transport[state.transportMode].label}, ${state.distance} km weekly`;
+  elements.electricityNote.textContent = `${state.electricity} kWh monthly`;
+  elements.foodNote.textContent = emissionFactors.diet[state.diet].label;
+  elements.shoppingNote.textContent = `${emissionFactors.shopping[state.shopping].label}, ${state.waste} kg waste weekly`;
+  elements.progressText.textContent = `${formatKg(progressKg)} saved through completed goals`;
+  elements.progressBar.style.width = `${Math.min(100, (progressKg / Math.max(1, reductionKg)) * 100)}%`;
+
+  renderInsights(data);
+  renderChallenges();
+  drawChart(data);
+}
+
+function comparisonCopy(total, reductionKg) {
+  const diff = total - averageMonthlyKg;
+  const direction = diff > 0 ? "above" : "below";
+  const percent = Math.abs((diff / averageMonthlyKg) * 100).toFixed(0);
+  return `You are ${percent}% ${direction} the sample average. Hitting your goal would save about ${formatKg(reductionKg)} this month.`;
+}
+
+function renderInsights(data) {
+  const ranked = [
+    {
+      key: data.transport + data.travel,
+      title: "Shift one regular trip",
+      copy: state.transportMode === "cycle"
+        ? "Your travel footprint is already low. Keep nearby trips active and avoid unnecessary flights."
+        : "Try public transport, carpooling, walking, or cycling for one repeated route each week."
+    },
+    {
+      key: data.electricity,
+      title: "Trim home energy demand",
+      copy: "Switch off unused appliances, use efficient lighting, and set a weekly electricity target."
+    },
+    {
+      key: data.food,
+      title: "Choose more plant-based meals",
+      copy: "Replacing a few meat-heavy meals with plant-based options can lower your food footprint."
+    },
+    {
+      key: data.shopping,
+      title: "Buy less, reuse more",
+      copy: "Avoid single-use plastic, reuse items, repair what you can, and prefer local products."
+    }
+  ].sort((a, b) => b.key - a.key).slice(0, 3);
+
+  elements.insightList.innerHTML = ranked.map((item) => `
+    <article class="insight">
+      <strong>${item.title}</strong>
+      <p>${item.copy}</p>
+    </article>
+  `).join("");
+}
+
+function renderChallenges() {
+  elements.challengeList.innerHTML = challenges.map((challenge) => {
+    const complete = state.completed.includes(challenge.id);
+    return `
+      <article class="challenge ${complete ? "complete" : ""}">
+        <span class="badge">${challenge.points} points</span>
+        <strong>${challenge.title}</strong>
+        <button type="button" data-id="${challenge.id}">${complete ? "Completed" : "Mark done"}</button>
+      </article>
+    `;
+  }).join("");
+
+  elements.challengeList.querySelectorAll("button").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.id;
+      state.completed = state.completed.includes(id)
+        ? state.completed.filter((item) => item !== id)
+        : [...state.completed, id];
+      saveState();
+      render();
+    });
+  });
+}
+
+function drawChart(data) {
+  const ctx = elements.chart.getContext("2d");
+  const pixelRatio = window.devicePixelRatio || 1;
+  const rect = elements.chart.getBoundingClientRect();
+  elements.chart.width = rect.width * pixelRatio;
+  elements.chart.height = rect.height * pixelRatio;
+  ctx.scale(pixelRatio, pixelRatio);
+
+  const values = [
+    ["Transport", data.transport + data.travel, "#2f8f9d"],
+    ["Electricity", data.electricity, "#f4b942"],
+    ["Food", data.food, "#1f7a52"],
+    ["Shopping", data.shopping, "#c96b45"]
+  ];
+
+  const width = rect.width;
+  const height = rect.height;
+  const padding = 34;
+  const chartHeight = height - padding * 2;
+  const maxValue = Math.max(...values.map((item) => item[1]), 1);
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = "#17201b";
+  ctx.font = "700 14px Inter, system-ui, sans-serif";
+  ctx.fillText("Major emission sources", padding, 26);
+
+  values.forEach(([label, value, color], index) => {
+    const barWidth = (width - padding * 2) / values.length - 18;
+    const x = padding + index * (barWidth + 18);
+    const barHeight = (value / maxValue) * (chartHeight - 34);
+    const y = height - padding - barHeight;
+
+    roundRect(ctx, x, y, barWidth, barHeight, 7, color);
+    ctx.fillStyle = "#17201b";
+    ctx.font = "700 12px Inter, system-ui, sans-serif";
+    ctx.fillText(`${Math.round(value)} kg`, x, y - 8);
+    ctx.fillStyle = "#66736b";
+    ctx.font = "600 12px Inter, system-ui, sans-serif";
+    wrapLabel(ctx, label, x, height - 14, barWidth);
+  });
+}
+
+function roundRect(ctx, x, y, width, height, radius, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height);
+  ctx.lineTo(x, y + height);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.fill();
+}
+
+function wrapLabel(ctx, label, x, y, maxWidth) {
+  if (ctx.measureText(label).width <= maxWidth) {
+    ctx.fillText(label, x, y);
+    return;
+  }
+  const words = label.split(" ");
+  ctx.fillText(words[0], x, y - 14);
+  ctx.fillText(words.slice(1).join(" "), x, y);
+}
+
+hydrateInputs();
+render();
+window.addEventListener("resize", render);
