@@ -42,6 +42,7 @@ const defaultState = {
 
 const averageMonthlyKg = 1250;
 const storageKey = "ecotrack-state-v1";
+const themeKey = "ecotrack-theme-v1";
 const formIds = ["transportMode", "distance", "electricity", "diet", "shopping", "waste", "flights"];
 const state = loadState();
 
@@ -63,7 +64,10 @@ const elements = {
   transportNote: document.querySelector("#transportNote"),
   electricityNote: document.querySelector("#electricityNote"),
   foodNote: document.querySelector("#foodNote"),
-  shoppingNote: document.querySelector("#shoppingNote")
+  shoppingNote: document.querySelector("#shoppingNote"),
+  themeToggle: document.querySelector("#themeToggle"),
+  themeIcon: document.querySelector("#themeIcon"),
+  introScreen: document.querySelector("#introScreen")
 };
 
 function loadState() {
@@ -76,6 +80,14 @@ function loadState() {
 
 function saveState() {
   localStorage.setItem(storageKey, JSON.stringify(state));
+}
+
+function loadTheme() {
+  return localStorage.getItem(themeKey) || "day";
+}
+
+function saveTheme(theme) {
+  localStorage.setItem(themeKey, theme);
 }
 
 function clampNumber(value) {
@@ -127,6 +139,13 @@ function hydrateInputs() {
     saveState();
     hydrateValuesOnly();
     render();
+  });
+
+  elements.themeToggle.addEventListener("click", () => {
+    const nextTheme = document.body.classList.contains("night") ? "day" : "night";
+    applyTheme(nextTheme);
+    saveTheme(nextTheme);
+    drawChart(calculate());
   });
 }
 
@@ -230,6 +249,102 @@ function renderChallenges() {
   });
 }
 
+function applyTheme(theme) {
+  const night = theme === "night";
+  document.body.classList.toggle("night", night);
+  elements.themeIcon.textContent = night ? "N" : "D";
+  elements.themeToggle.setAttribute("aria-label", night ? "Switch to bright mode" : "Switch to night mode");
+  elements.themeToggle.title = night ? "Switch to bright mode" : "Switch to night mode";
+}
+
+function showIntro() {
+  window.setTimeout(() => {
+    elements.introScreen.classList.add("hide");
+    document.body.classList.add("ready");
+  }, 5600);
+}
+
+function setupRevealAnimations() {
+  const panels = document.querySelectorAll(".reveal-panel");
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add("in-view");
+      }
+    });
+  }, { threshold: 0.16 });
+
+  panels.forEach((panel) => observer.observe(panel));
+}
+
+function setupActiveTabs() {
+  const links = [...document.querySelectorAll("nav a")];
+  const sections = links
+    .map((link) => document.querySelector(link.getAttribute("href")))
+    .filter(Boolean);
+
+  const observer = new IntersectionObserver((entries) => {
+    const visible = entries
+      .filter((entry) => entry.isIntersecting)
+      .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+
+    if (!visible) {
+      return;
+    }
+
+    links.forEach((link) => {
+      link.classList.toggle("active", link.getAttribute("href") === `#${visible.target.id}`);
+    });
+  }, { rootMargin: "-20% 0px -55% 0px", threshold: [0.12, 0.35, 0.65] });
+
+  sections.forEach((section) => observer.observe(section));
+}
+
+function setupRipples() {
+  document.addEventListener("click", (event) => {
+    const target = event.target.closest("button, nav a");
+    if (!target) {
+      return;
+    }
+
+    const rect = target.getBoundingClientRect();
+    const ripple = document.createElement("span");
+    const size = Math.max(rect.width, rect.height);
+    ripple.className = "ripple";
+    ripple.style.width = `${size}px`;
+    ripple.style.height = `${size}px`;
+    ripple.style.left = `${event.clientX - rect.left}px`;
+    ripple.style.top = `${event.clientY - rect.top}px`;
+    target.appendChild(ripple);
+    ripple.addEventListener("animationend", () => ripple.remove());
+  });
+}
+
+function setupTiltGestures() {
+  const cards = document.querySelectorAll(".tilt-card");
+
+  cards.forEach((card) => {
+    card.addEventListener("pointermove", (event) => {
+      if (window.matchMedia("(max-width: 760px)").matches) {
+        return;
+      }
+
+      const rect = card.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width) - 0.5;
+      const y = ((event.clientY - rect.top) / rect.height) - 0.5;
+      card.style.transform = `perspective(900px) rotateX(${y * -4}deg) rotateY(${x * 5}deg) translateY(-3px)`;
+    });
+
+    card.addEventListener("pointerleave", () => {
+      card.style.transform = "";
+    });
+  });
+}
+
+function getThemeColor(name) {
+  return getComputedStyle(document.body).getPropertyValue(name).trim();
+}
+
 function drawChart(data) {
   const ctx = elements.chart.getContext("2d");
   const pixelRatio = window.devicePixelRatio || 1;
@@ -252,7 +367,7 @@ function drawChart(data) {
   const maxValue = Math.max(...values.map((item) => item[1]), 1);
 
   ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = "#17201b";
+  ctx.fillStyle = getThemeColor("--chart-ink") || "#17201b";
   ctx.font = "700 14px Inter, system-ui, sans-serif";
   ctx.fillText("Major emission sources", padding, 26);
 
@@ -263,10 +378,10 @@ function drawChart(data) {
     const y = height - padding - barHeight;
 
     roundRect(ctx, x, y, barWidth, barHeight, 7, color);
-    ctx.fillStyle = "#17201b";
+    ctx.fillStyle = getThemeColor("--chart-ink") || "#17201b";
     ctx.font = "700 12px Inter, system-ui, sans-serif";
     ctx.fillText(`${Math.round(value)} kg`, x, y - 8);
-    ctx.fillStyle = "#66736b";
+    ctx.fillStyle = getThemeColor("--chart-muted") || "#66736b";
     ctx.font = "600 12px Inter, system-ui, sans-serif";
     wrapLabel(ctx, label, x, height - 14, barWidth);
   });
@@ -295,6 +410,12 @@ function wrapLabel(ctx, label, x, y, maxWidth) {
   ctx.fillText(words.slice(1).join(" "), x, y);
 }
 
+applyTheme(loadTheme());
 hydrateInputs();
+setupRevealAnimations();
+setupActiveTabs();
+setupRipples();
+setupTiltGestures();
+showIntro();
 render();
 window.addEventListener("resize", render);

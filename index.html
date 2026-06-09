@@ -7,6 +7,20 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <div class="intro-screen" id="introScreen" aria-label="Welcome animation">
+    <div class="intro-orbit" aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+    <div class="intro-content">
+      <div class="intro-mark">EcoTrack</div>
+      <h2>Welcome to EcoTrack</h2>
+      <p>Track smarter. Live lighter. Build sustainable habits with confidence.</p>
+      <div class="intro-loader" aria-hidden="true"><span></span></div>
+    </div>
+  </div>
+
   <div class="app-shell">
     <aside class="sidebar" aria-label="EcoTrack navigation">
       <div class="brand">
@@ -29,15 +43,20 @@
     </aside>
 
     <main>
-      <section class="topbar" id="dashboard">
+      <section class="topbar reveal-panel" id="dashboard">
         <div>
           <p class="eyebrow">Personal monthly estimate</p>
           <h1>Your carbon footprint, made visible.</h1>
         </div>
-        <button id="resetButton" class="ghost-button" type="button">Reset data</button>
+        <div class="top-actions">
+          <button id="themeToggle" class="icon-button" type="button" aria-label="Switch to night mode" title="Switch theme">
+            <span id="themeIcon" aria-hidden="true">D</span>
+          </button>
+          <button id="resetButton" class="ghost-button" type="button">Reset data</button>
+        </div>
       </section>
 
-      <section class="hero-panel" aria-label="Carbon footprint overview">
+      <section class="hero-panel reveal-panel tilt-card" aria-label="Carbon footprint overview">
         <div class="score-block">
           <span class="score-label">Estimated footprint</span>
           <div><span id="totalFootprint" class="score">0.00</span><span class="unit"> tCO2e / month</span></div>
@@ -53,30 +72,30 @@
         </div>
       </section>
 
-      <section class="metric-grid" aria-label="Emission metrics">
-        <article class="metric">
+      <section class="metric-grid reveal-panel" aria-label="Emission metrics">
+        <article class="metric tilt-card">
           <span>Transport</span>
           <strong id="transportMetric">0 kg</strong>
           <small id="transportNote">Daily movement</small>
         </article>
-        <article class="metric">
+        <article class="metric tilt-card">
           <span>Electricity</span>
           <strong id="electricityMetric">0 kg</strong>
           <small id="electricityNote">Home energy</small>
         </article>
-        <article class="metric">
+        <article class="metric tilt-card">
           <span>Food</span>
           <strong id="foodMetric">0 kg</strong>
           <small id="foodNote">Diet pattern</small>
         </article>
-        <article class="metric">
+        <article class="metric tilt-card">
           <span>Shopping & waste</span>
           <strong id="shoppingMetric">0 kg</strong>
           <small id="shoppingNote">Consumption habits</small>
         </article>
       </section>
 
-      <section class="workbench">
+      <section class="workbench reveal-panel">
         <form class="calculator" id="calculator" aria-label="Carbon footprint calculator">
           <div class="section-heading">
             <p class="eyebrow">Calculator</p>
@@ -129,7 +148,7 @@
           </label>
         </form>
 
-        <section class="insights" aria-label="Personalized insights">
+        <section class="insights tilt-card" aria-label="Personalized insights">
           <div class="section-heading">
             <p class="eyebrow">Insights</p>
             <h2>Best next actions</h2>
@@ -145,7 +164,7 @@
         </section>
       </section>
 
-      <section class="goals-band" id="goals">
+      <section class="goals-band reveal-panel" id="goals">
         <div class="section-heading">
           <p class="eyebrow">Eco goals and challenges</p>
           <h2>Build small habits that stick</h2>
@@ -153,18 +172,18 @@
         <div id="challengeList" class="challenge-list"></div>
       </section>
 
-      <section class="learn-grid" id="learn" aria-label="Awareness content">
-        <article>
+      <section class="learn-grid reveal-panel" id="learn" aria-label="Awareness content">
+        <article class="tilt-card">
           <span>Climate fact</span>
           <h3>Electricity choices matter</h3>
           <p>Efficient appliances, switched-off standby devices, and renewable energy plans can reduce household emissions quickly.</p>
         </article>
-        <article>
+        <article class="tilt-card">
           <span>Daily habit</span>
           <h3>Short trips are opportunities</h3>
           <p>Walking, cycling, public transport, or carpooling for nearby travel can lower transport emissions while improving routine fitness.</p>
         </article>
-        <article>
+        <article class="tilt-card">
           <span>Sustainable living</span>
           <h3>Reuse before recycling</h3>
           <p>Repairing, sharing, refilling, and buying local products often avoids emissions before waste management even begins.</p>
