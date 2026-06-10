@@ -9,7 +9,6 @@ EcoTrack helps users estimate their monthly carbon footprint, understand major e
 - Eco goals and challenges with points and completion states.
 - Awareness content for climate facts and sustainable habits.
 - Professional welcome animation, scroll reveal effects, card gestures, and bright/night mode.
-- Submission readiness score section aligned with common evaluation categories.
 
 ## File Structure
 
@@ -36,9 +35,9 @@ Run:
 npm test
 ```
 
-The test suite checks that the project includes the main required features, accessibility markers, animation support, night mode, documentation, and readiness scoring.
+The test suite checks that the project includes the main required features, accessibility markers, animation support, night mode, documentation, and responsive layout.
 
-## Evaluation Alignment
+## Project Quality Alignment
 
 EcoTrack is designed to align with these categories:
 

@@ -15,7 +15,6 @@ const checks = [
   ["dashboard section", html.includes('id="dashboard"')],
   ["goals section", html.includes('id="goals"')],
   ["awareness section", html.includes('id="learn"')],
-  ["evaluation score section", html.includes('id="evaluation"')],
   ["welcome intro", html.includes("Welcome to EcoTrack") && css.includes(".intro-screen")],
   ["bright/night mode", html.includes("themeToggle") && js.includes("applyTheme") && css.includes("body.night")],
   ["personalized insights", js.includes("renderInsights")],
