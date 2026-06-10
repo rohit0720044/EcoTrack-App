@@ -40,13 +40,21 @@ const defaultState = {
   completed: []
 };
 
+const numericLimits = {
+  distance: 1000,
+  electricity: 3000,
+  waste: 200,
+  flights: 80
+};
+
 const averageMonthlyKg = 1250;
 const storageKey = "ecotrack-state-v1";
 const themeKey = "ecotrack-theme-v1";
 const formIds = ["transportMode", "distance", "electricity", "diet", "shopping", "waste", "flights"];
-const state = loadState();
+const hasDom = typeof document !== "undefined";
+const state = hasDom ? loadState() : { ...defaultState };
 
-const elements = {
+const elements = hasDom ? {
   total: document.querySelector("#totalFootprint"),
   comparison: document.querySelector("#comparisonText"),
   goalRange: document.querySelector("#goalRange"),
@@ -68,10 +76,13 @@ const elements = {
   themeToggle: document.querySelector("#themeToggle"),
   themeIcon: document.querySelector("#themeIcon"),
   introScreen: document.querySelector("#introScreen")
-};
+} : {};
 
 function loadState() {
   try {
+    if (typeof localStorage === "undefined") {
+      return { ...defaultState };
+    }
     return { ...defaultState, ...JSON.parse(localStorage.getItem(storageKey)) };
   } catch {
     return { ...defaultState };
@@ -79,27 +90,58 @@ function loadState() {
 }
 
 function saveState() {
-  localStorage.setItem(storageKey, JSON.stringify(state));
+  if (typeof localStorage !== "undefined") {
+    localStorage.setItem(storageKey, JSON.stringify(state));
+  }
 }
 
 function loadTheme() {
-  return localStorage.getItem(themeKey) || "day";
+  return typeof localStorage === "undefined" ? "day" : localStorage.getItem(themeKey) || "day";
 }
 
 function saveTheme(theme) {
-  localStorage.setItem(themeKey, theme);
+  if (typeof localStorage !== "undefined") {
+    localStorage.setItem(themeKey, theme);
+  }
 }
 
 function clampNumber(value) {
   return Math.max(0, Number(value) || 0);
 }
 
-function calculate() {
-  const transport = clampNumber(state.distance) * 4.33 * emissionFactors.transport[state.transportMode].factor;
-  const electricity = clampNumber(state.electricity) * 0.72;
-  const food = emissionFactors.diet[state.diet].kg;
-  const shopping = emissionFactors.shopping[state.shopping].kg + clampNumber(state.waste) * 4.33 * 0.57;
-  const travel = clampNumber(state.flights) * 90;
+function normalizeNumber(value, max = Number.MAX_SAFE_INTEGER) {
+  return Math.min(max, clampNumber(value));
+}
+
+function normalizeChoice(value, allowedValues, fallback) {
+  return allowedValues.includes(value) ? value : fallback;
+}
+
+function normalizeState(nextState = {}) {
+  return {
+    ...defaultState,
+    ...nextState,
+    transportMode: normalizeChoice(nextState.transportMode, Object.keys(emissionFactors.transport), defaultState.transportMode),
+    distance: normalizeNumber(nextState.distance, numericLimits.distance),
+    electricity: normalizeNumber(nextState.electricity, numericLimits.electricity),
+    diet: normalizeChoice(nextState.diet, Object.keys(emissionFactors.diet), defaultState.diet),
+    shopping: normalizeChoice(nextState.shopping, Object.keys(emissionFactors.shopping), defaultState.shopping),
+    waste: normalizeNumber(nextState.waste, numericLimits.waste),
+    flights: normalizeNumber(nextState.flights, numericLimits.flights),
+    goal: normalizeNumber(nextState.goal, 40),
+    completed: Array.isArray(nextState.completed)
+      ? nextState.completed.filter((id) => challenges.some((challenge) => challenge.id === id))
+      : []
+  };
+}
+
+function calculateFootprint(inputState = {}) {
+  const safeState = normalizeState(inputState);
+  const transport = safeState.distance * 4.33 * emissionFactors.transport[safeState.transportMode].factor;
+  const electricity = safeState.electricity * 0.72;
+  const food = emissionFactors.diet[safeState.diet].kg;
+  const shopping = emissionFactors.shopping[safeState.shopping].kg + safeState.waste * 4.33 * 0.57;
+  const travel = safeState.flights * 90;
   const total = transport + electricity + food + shopping + travel;
 
   return {
@@ -112,6 +154,11 @@ function calculate() {
   };
 }
 
+function calculate() {
+  Object.assign(state, normalizeState(state));
+  return calculateFootprint(state);
+}
+
 function formatKg(value) {
   return `${Math.round(value).toLocaleString()} kg`;
 }
@@ -121,7 +168,9 @@ function hydrateInputs() {
     const input = document.querySelector(`#${id}`);
     input.value = state[id];
     input.addEventListener("input", () => {
-      state[id] = input.type === "number" ? clampNumber(input.value) : input.value;
+      const rawValue = input.type === "number" ? normalizeNumber(input.value, numericLimits[id]) : input.value;
+      state[id] = rawValue;
+      input.value = rawValue;
       saveState();
       render();
     });
@@ -217,25 +266,37 @@ function renderInsights(data) {
     }
   ].sort((a, b) => b.key - a.key).slice(0, 3);
 
-  elements.insightList.innerHTML = ranked.map((item) => `
-    <article class="insight">
-      <strong>${item.title}</strong>
-      <p>${item.copy}</p>
-    </article>
-  `).join("");
+  elements.insightList.replaceChildren(...ranked.map((item) => {
+    const article = document.createElement("article");
+    const title = document.createElement("strong");
+    const copy = document.createElement("p");
+
+    article.className = "insight";
+    title.textContent = item.title;
+    copy.textContent = item.copy;
+    article.append(title, copy);
+    return article;
+  }));
 }
 
 function renderChallenges() {
-  elements.challengeList.innerHTML = challenges.map((challenge) => {
+  elements.challengeList.replaceChildren(...challenges.map((challenge) => {
     const complete = state.completed.includes(challenge.id);
-    return `
-      <article class="challenge ${complete ? "complete" : ""}">
-        <span class="badge">${challenge.points} points</span>
-        <strong>${challenge.title}</strong>
-        <button type="button" data-id="${challenge.id}">${complete ? "Completed" : "Mark done"}</button>
-      </article>
-    `;
-  }).join("");
+    const article = document.createElement("article");
+    const badge = document.createElement("span");
+    const title = document.createElement("strong");
+    const button = document.createElement("button");
+
+    article.className = `challenge ${complete ? "complete" : ""}`.trim();
+    badge.className = "badge";
+    badge.textContent = `${challenge.points} points`;
+    title.textContent = challenge.title;
+    button.type = "button";
+    button.dataset.id = challenge.id;
+    button.textContent = complete ? "Completed" : "Mark done";
+    article.append(badge, title, button);
+    return article;
+  }));
 
   elements.challengeList.querySelectorAll("button").forEach((button) => {
     button.addEventListener("click", () => {
@@ -410,12 +471,26 @@ function wrapLabel(ctx, label, x, y, maxWidth) {
   ctx.fillText(words.slice(1).join(" "), x, y);
 }
 
-applyTheme(loadTheme());
-hydrateInputs();
-setupRevealAnimations();
-setupActiveTabs();
-setupRipples();
-setupTiltGestures();
-showIntro();
-render();
-window.addEventListener("resize", render);
+if (hasDom) {
+  applyTheme(loadTheme());
+  hydrateInputs();
+  setupRevealAnimations();
+  setupActiveTabs();
+  setupRipples();
+  setupTiltGestures();
+  showIntro();
+  render();
+  window.addEventListener("resize", render);
+}
+
+if (typeof module !== "undefined") {
+  module.exports = {
+    calculateFootprint,
+    normalizeState,
+    formatKg,
+    emissionFactors,
+    challenges,
+    defaultState,
+    numericLimits
+  };
+}

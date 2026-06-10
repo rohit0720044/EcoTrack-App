@@ -9,6 +9,7 @@ const html = read("index.html");
 const css = read("styles.css");
 const js = read("script.js");
 const readme = read("README.md");
+const security = read("SECURITY.md");
 
 const checks = [
   ["calculator section", html.includes('id="calculator"')],
@@ -24,7 +25,11 @@ const checks = [
   ["gesture interactions", js.includes("setupTiltGestures") && js.includes("setupRipples")],
   ["accessibility labels", html.includes("aria-label") && css.includes("prefers-reduced-motion")],
   ["responsive design", css.includes("@media (max-width: 680px)")],
-  ["documentation", readme.includes("How To Run") && readme.includes("How To Test")]
+  ["security headers", html.includes("Content-Security-Policy") && html.includes("connect-src 'none'")],
+  ["safe DOM rendering", js.includes("replaceChildren") && js.includes("textContent")],
+  ["input normalization", js.includes("normalizeState") && js.includes("numericLimits")],
+  ["documentation", readme.includes("How To Run") && readme.includes("How To Test")],
+  ["security documentation", security.includes("Content Security Policy") && security.includes("localStorage")]
 ];
 
 for (const [name, passed] of checks) {
