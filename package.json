@@ -1,0 +1,17 @@
+{
+  "name": "ecotrack-app",
+  "version": "1.0.0",
+  "description": "EcoTrack carbon footprint awareness platform with calculator, dashboard, goals, insights, animations, and readiness scoring.",
+  "private": true,
+  "scripts": {
+    "test": "node tests/static-quality.test.js"
+  },
+  "keywords": [
+    "carbon-footprint",
+    "sustainability",
+    "eco-track",
+    "climate-awareness"
+  ],
+  "author": "Rohit",
+  "license": "MIT"
+}
